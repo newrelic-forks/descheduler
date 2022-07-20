@@ -77,6 +77,7 @@ type Namespaces struct {
 //  once the policy version is bumped to v1alpha2
 type StrategyParameters struct {
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholds
+	CordonNodes                       bool
 	NodeAffinityType                  []string
 	PodsHavingTooManyRestarts         *PodsHavingTooManyRestarts
 	PodLifeTime                       *PodLifeTime

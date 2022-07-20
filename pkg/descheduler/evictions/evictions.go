@@ -175,6 +175,21 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
 	return true
 }
 
+func (pe *PodEvictor) CordonNode(ctx context.Context, node *v1.Node) bool {
+	klog.V(1).InfoS("Cordoning node", "node", node.Name)
+	if node.Spec.Unschedulable != true {
+		node.Spec.Unschedulable = true
+		if _, err := pe.client.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{}); err != nil {
+			klog.ErrorS(err, "Node cordon failed", "node", node.Name)
+			return false
+		}
+		klog.V(1).InfoS("Node successfully cordoned", "node", node.Name)
+	} else {
+		klog.V(1).InfoS("Node already cordoned, skipping", "node", node.Name)
+	}
+	return true
+}
+
 func evictPod(ctx context.Context, client clientset.Interface, pod *v1.Pod, policyGroupVersion string) error {
 	deleteOptions := &metav1.DeleteOptions{}
 	// GracePeriodSeconds ?

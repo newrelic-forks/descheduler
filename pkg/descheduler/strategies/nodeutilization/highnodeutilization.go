@@ -118,6 +118,7 @@ func HighNodeUtilization(ctx context.Context, client clientset.Interface, strate
 		evictorFilter.Filter,
 		resourceNames,
 		"HighNodeUtilization",
+		strategy.Params.CordonNodes,
 		continueEvictionCond)
 
 }

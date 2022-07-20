@@ -75,6 +75,7 @@ type Namespaces struct {
 // Besides Namespaces ThresholdPriority and ThresholdPriorityClassName only one of its members may be specified
 type StrategyParameters struct {
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholds `json:"nodeResourceUtilizationThresholds,omitempty"`
+	CordonNodes                       bool                               `json:"cordonNodes,omitempty"`
 	NodeAffinityType                  []string                           `json:"nodeAffinityType,omitempty"`
 	PodsHavingTooManyRestarts         *PodsHavingTooManyRestarts         `json:"podsHavingTooManyRestarts,omitempty"`
 	PodLifeTime                       *PodLifeTime                       `json:"podLifeTime,omitempty"`

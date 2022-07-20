@@ -241,6 +241,7 @@ func evictPodsFromSourceNodes(
 	podFilter func(pod *v1.Pod) bool,
 	resourceNames []v1.ResourceName,
 	strategy string,
+	cordonNodes bool,
 	continueEviction continueEvictionCond,
 ) {
 	// upper bound on total number of pods/cpu/memory and optional extended resources to be moved
@@ -285,6 +286,12 @@ func evictPodsFromSourceNodes(
 		if len(removablePods) == 0 {
 			klog.V(1).InfoS("No removable pods on node, try next node", "node", klog.KObj(node.node))
 			continue
+		}
+
+		if cordonNodes {
+			if !podEvictor.CordonNode(ctx, node.node) {
+				continue
+			}
 		}
 
 		klog.V(1).InfoS("Evicting pods based on priority, if they have same priority, they'll be evicted based on QoS tiers")
