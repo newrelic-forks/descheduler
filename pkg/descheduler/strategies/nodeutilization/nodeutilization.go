@@ -22,15 +22,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/klog/v2"
-	"sort"
-	"time"
-
 	"sigs.k8s.io/descheduler/pkg/api"
 	"sigs.k8s.io/descheduler/pkg/descheduler/evictions"
 	"sigs.k8s.io/descheduler/pkg/descheduler/node"
 	nodeutil "sigs.k8s.io/descheduler/pkg/descheduler/node"
 	podutil "sigs.k8s.io/descheduler/pkg/descheduler/pod"
 	"sigs.k8s.io/descheduler/pkg/utils"
+	"sort"
 )
 
 // NodeUsage stores a node's info, pods on it, thresholds and its resource usage
@@ -241,8 +239,6 @@ func evictPodsFromSourceNodes(
 	podFilter func(pod *v1.Pod) bool,
 	resourceNames []v1.ResourceName,
 	strategy string,
-	cordonNodes bool,
-	minimumNodeAge string,
 	continueEviction continueEvictionCond,
 ) {
 	// upper bound on total number of pods/cpu/memory and optional extended resources to be moved
@@ -278,19 +274,7 @@ func evictPodsFromSourceNodes(
 	}
 	klog.V(1).InfoS("Total capacity to be moved", keysAndValues...)
 
-	if cordonNodes {
-		for _, node := range sourceNodes {
-			if isNodeOldEnough(minimumNodeAge, node) {
-				podEvictor.CordonNode(ctx, node.node)
-			}
-		}
-	}
-
 	for _, node := range sourceNodes {
-		if !isNodeOldEnough(minimumNodeAge, node) {
-			continue
-		}
-
 		klog.V(3).InfoS("Evicting pods from node", "node", klog.KObj(node.node), "usage", node.usage)
 
 		nonRemovablePods, removablePods := classifyPods(node.allPods, podFilter)
@@ -307,18 +291,6 @@ func evictPodsFromSourceNodes(
 		evictPods(ctx, removablePods, node, totalAvailableUsage, taintsOfDestinationNodes, podEvictor, strategy, continueEviction)
 		klog.V(1).InfoS("Evicted pods from node", "node", klog.KObj(node.node), "evictedPods", podEvictor.NodeEvicted(node.node), "usage", node.usage)
 	}
-}
-
-func isNodeOldEnough(minimumNodeAge string, node NodeInfo) bool {
-	if minimumNodeAge != "" {
-		minimumNodeAgeDuration, _ := time.ParseDuration(minimumNodeAge)
-		nodeAge := time.Now().Sub(node.node.CreationTimestamp.Time)
-		if nodeAge < minimumNodeAgeDuration {
-			klog.V(1).InfoS("Node is newer than configured minimumNodeAge", "node", klog.KObj(node.node), "minimumNodeAge", minimumNodeAge)
-			return false
-		}
-	}
-	return true
 }
 
 func evictPods(

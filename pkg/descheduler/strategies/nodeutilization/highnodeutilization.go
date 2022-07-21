@@ -19,6 +19,7 @@ package nodeutilization
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -110,18 +111,35 @@ func HighNodeUtilization(ctx context.Context, client clientset.Interface, strate
 	// Sort the nodes by the usage in ascending order
 	sortNodesByUsage(sourceNodes, true)
 
-	evictPodsFromSourceNodes(
-		ctx,
-		sourceNodes,
-		highNodes,
-		podEvictor,
-		evictorFilter.Filter,
-		resourceNames,
-		"HighNodeUtilization",
-		strategy.Params.CordonNodes,
-		strategy.Params.MinimumNodeAge,
-		continueEvictionCond)
+	if strategy.Params.DeleteNodes {
+		for _, node := range sourceNodes {
+			if isNodeOldEnough(strategy.Params.MinimumNodeAge, node) {
+				podEvictor.DeleteNode(ctx, node.node)
+			}
+		}
+	} else {
+		evictPodsFromSourceNodes(
+			ctx,
+			sourceNodes,
+			highNodes,
+			podEvictor,
+			evictorFilter.Filter,
+			resourceNames,
+			"HighNodeUtilization",
+			continueEvictionCond)
+	}
+}
 
+func isNodeOldEnough(minimumNodeAge string, node NodeInfo) bool {
+	if minimumNodeAge != "" {
+		minimumNodeAgeDuration, _ := time.ParseDuration(minimumNodeAge)
+		nodeAge := time.Now().Sub(node.node.CreationTimestamp.Time)
+		if nodeAge < minimumNodeAgeDuration {
+			klog.V(1).InfoS("Node is newer than configured minimumNodeAge", "node", klog.KObj(node.node), "minimumNodeAge", minimumNodeAge)
+			return false
+		}
+	}
+	return true
 }
 
 func validateHighUtilizationStrategyConfig(thresholds, targetThresholds api.ResourceThresholds) error {

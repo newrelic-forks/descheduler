@@ -175,17 +175,21 @@ func (pe *PodEvictor) EvictPod(ctx context.Context, pod *v1.Pod, opts EvictOptio
 	return true
 }
 
-func (pe *PodEvictor) CordonNode(ctx context.Context, node *v1.Node) bool {
-	klog.V(1).InfoS("Cordoning node", "node", node.Name)
+func (pe *PodEvictor) DeleteNode(ctx context.Context, node *v1.Node) bool {
+	klog.V(1).InfoS("Deleteing node", "node", node.Name)
 	if node.Spec.Unschedulable != true {
 		node.Spec.Unschedulable = true
-		if _, err := pe.client.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{}); err != nil {
-			klog.ErrorS(err, "Node cordon failed", "node", node.Name)
+		if err := pe.client.CoreV1().Nodes().Delete(ctx, node.Name, metav1.DeleteOptions{}); err != nil {
+			if apierrors.IsNotFound(err) {
+				klog.V(1).InfoS("Node already cordoned, skipping", "node", node.Name)
+				return true
+			}
+			klog.ErrorS(err, "Node delete failed", "node", node.Name)
 			return false
 		}
-		klog.V(1).InfoS("Node successfully cordoned", "node", node.Name)
+		klog.V(1).InfoS("Node successfully delete", "node", node.Name)
 	} else {
-		klog.V(1).InfoS("Node already cordoned, skipping", "node", node.Name)
+
 	}
 	return true
 }
