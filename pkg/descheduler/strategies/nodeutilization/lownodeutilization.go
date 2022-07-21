@@ -168,6 +168,7 @@ func LowNodeUtilization(ctx context.Context, client clientset.Interface, strateg
 		resourceNames,
 		"LowNodeUtilization",
 		strategy.Params.CordonNodes,
+		strategy.Params.MinimumNodeAge,
 		continueEvictionCond)
 
 	klog.V(1).InfoS("Total number of pods evicted", "evictedPods", podEvictor.TotalEvicted())

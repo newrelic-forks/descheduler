@@ -119,6 +119,7 @@ func HighNodeUtilization(ctx context.Context, client clientset.Interface, strate
 		resourceNames,
 		"HighNodeUtilization",
 		strategy.Params.CordonNodes,
+		strategy.Params.MinimumNodeAge,
 		continueEvictionCond)
 
 }

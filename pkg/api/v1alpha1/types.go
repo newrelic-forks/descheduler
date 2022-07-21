@@ -76,6 +76,7 @@ type Namespaces struct {
 type StrategyParameters struct {
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholds `json:"nodeResourceUtilizationThresholds,omitempty"`
 	CordonNodes                       bool                               `json:"cordonNodes,omitempty"`
+	MinimumNodeAge                    string                             `json:"minimumNodeAge,omitempty"`
 	NodeAffinityType                  []string                           `json:"nodeAffinityType,omitempty"`
 	PodsHavingTooManyRestarts         *PodsHavingTooManyRestarts         `json:"podsHavingTooManyRestarts,omitempty"`
 	PodLifeTime                       *PodLifeTime                       `json:"podLifeTime,omitempty"`

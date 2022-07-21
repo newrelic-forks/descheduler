@@ -78,6 +78,7 @@ type Namespaces struct {
 type StrategyParameters struct {
 	NodeResourceUtilizationThresholds *NodeResourceUtilizationThresholds
 	CordonNodes                       bool
+	MinimumNodeAge                    string
 	NodeAffinityType                  []string
 	PodsHavingTooManyRestarts         *PodsHavingTooManyRestarts
 	PodLifeTime                       *PodLifeTime

@@ -19,13 +19,11 @@ package nodeutilization
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sort"
-	"time"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/klog/v2"
+	"sort"
+	"time"
 
 	"sigs.k8s.io/descheduler/pkg/api"
 	"sigs.k8s.io/descheduler/pkg/descheduler/evictions"
@@ -244,6 +242,7 @@ func evictPodsFromSourceNodes(
 	resourceNames []v1.ResourceName,
 	strategy string,
 	cordonNodes bool,
+	minimumNodeAge string,
 	continueEviction continueEvictionCond,
 ) {
 	// upper bound on total number of pods/cpu/memory and optional extended resources to be moved
@@ -279,7 +278,19 @@ func evictPodsFromSourceNodes(
 	}
 	klog.V(1).InfoS("Total capacity to be moved", keysAndValues...)
 
+	if cordonNodes {
+		for _, node := range sourceNodes {
+			if isNodeOldEnough(minimumNodeAge, node) {
+				podEvictor.CordonNode(ctx, node.node)
+			}
+		}
+	}
+
 	for _, node := range sourceNodes {
+		if !isNodeOldEnough(minimumNodeAge, node) {
+			continue
+		}
+
 		klog.V(3).InfoS("Evicting pods from node", "node", klog.KObj(node.node), "usage", node.usage)
 
 		nonRemovablePods, removablePods := classifyPods(node.allPods, podFilter)
@@ -290,20 +301,24 @@ func evictPodsFromSourceNodes(
 			continue
 		}
 
-		fifteenMinutesAgo := metav1.NewTime(time.Now().Add(time.Minute * -15))
-
-		if cordonNodes && node.node.CreationTimestamp.Before(&fifteenMinutesAgo) {
-			if !podEvictor.CordonNode(ctx, node.node) {
-				continue
-			}
-		}
-
 		klog.V(1).InfoS("Evicting pods based on priority, if they have same priority, they'll be evicted based on QoS tiers")
 		// sort the evictable Pods based on priority. This also sorts them based on QoS. If there are multiple pods with same priority, they are sorted based on QoS tiers.
 		podutil.SortPodsBasedOnPriorityLowToHigh(removablePods)
 		evictPods(ctx, removablePods, node, totalAvailableUsage, taintsOfDestinationNodes, podEvictor, strategy, continueEviction)
 		klog.V(1).InfoS("Evicted pods from node", "node", klog.KObj(node.node), "evictedPods", podEvictor.NodeEvicted(node.node), "usage", node.usage)
 	}
+}
+
+func isNodeOldEnough(minimumNodeAge string, node NodeInfo) bool {
+	if minimumNodeAge != "" {
+		minimumNodeAgeDuration, _ := time.ParseDuration(minimumNodeAge)
+		nodeAge := time.Now().Sub(node.node.CreationTimestamp.Time)
+		if nodeAge < minimumNodeAgeDuration {
+			klog.V(1).InfoS("Node is newer than configured minimumNodeAge", "node", klog.KObj(node.node), "minimumNodeAge", minimumNodeAge)
+			return false
+		}
+	}
+	return true
 }
 
 func evictPods(
