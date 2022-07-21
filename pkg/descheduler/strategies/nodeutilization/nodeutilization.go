@@ -19,7 +19,9 @@ package nodeutilization
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -288,7 +290,9 @@ func evictPodsFromSourceNodes(
 			continue
 		}
 
-		if cordonNodes {
+		fifteenMinutesAgo := metav1.NewTime(time.Now().Add(time.Minute * -15))
+
+		if cordonNodes && node.node.CreationTimestamp.Before(&fifteenMinutesAgo) {
 			if !podEvictor.CordonNode(ctx, node.node) {
 				continue
 			}
